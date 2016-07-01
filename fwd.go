@@ -6,8 +6,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	//"time"
-	//"sync"
 )
 
 var src_proto = "tcp"
@@ -17,7 +15,6 @@ var dest_ipport = "127.0.0.1:3000"
 var dbg = false
 
 func help() {
-	fmt.Println("fwd \n\t tcp:0.0.0.0:30303→tcp:127.0.0.1:3000")
 	fmt.Println("fwd google.com:80 \n\t tcp:0.0.0.0:30303→tcp:google:80")
 	fmt.Println("fwd 127.0.0.1:80 google.com:80 \n\t tcp:127.0.0.1:80→tcp:google:80")
 	fmt.Println("fwd udp 127.0.0.1:80 google.com:80 \n\t udp:127.0.0.1:80→udp:google:80")
@@ -29,7 +26,8 @@ func main() {
 	arg := os.Args[1:]
 	switch len(arg) {
 	case 0:
-		arg = append(arg, "help")
+		help()
+		return
 	case 1:
 		dest_ipport = arg[0]
 	case 2:
@@ -48,10 +46,6 @@ func main() {
 	default:
 		fmt.Println("Too many args.")
 		arg = append(arg, "help")
-	}
-	if arg[0] == "help" {
-		help()
-		return
 	}
 
 	// Blocking Server
@@ -146,34 +140,4 @@ func chanFromConn(conn net.Conn) chan []byte {
 	}()
 
 	return c
-}
-
-func handleComms1(conn net.Conn) {
-	/*	conn.Pipe
-		target, err := net.Dial(dest_proto, dest_ipport)
-		defer target.Close()
-
-		var wg sync.WaitGroup
-		wg.Add(2)
-
-		go func() { //Client to server
-
-			for target.ok() {
-				target.Write(conn.Read([]byte("\n")))
-			}
-			wg.Done()
-		}()
-		go func() { //Server To Client
-			for target.ok() {
-				conn.Write(target.Read([]byte("\n")))
-			}
-			wg.Done()
-		}()
-
-		//   conn.Write([]byte("Hi. Do you have ID?\n"))
-		//   ID, _ := bufio.NewReader(conn).ReadString('\n')
-		// bufio.NewReader(conn).ReadString('\n')
-
-		wg.Wait()
-	*/
 }
