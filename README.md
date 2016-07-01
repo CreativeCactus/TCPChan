@@ -1,10 +1,8 @@
 # TCPChan
 
-![cat](cat.png =250x150)
+<img src="https://raw.githubusercontent.com/CreativeCactus/TCPChan/master/cat.png" alt="cat" style="height:150px; width:250px; right: 0px; position:absolute;"></img>
 
 A little tool for forwarding TCP traffic. Notably useful for port-forwarding docker containers on a remote host.
-
-<style>img[alt=cat] { width: 200px; }</style>
 
 # How use?
 
