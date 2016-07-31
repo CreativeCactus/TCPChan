@@ -16,6 +16,8 @@ Glad asked!
 
 ``` ./fwd tcp 0.0.0.0:80 udp 10.0.1.100:8080 ```
 
+Note! You need to have uuidgen available. ``` apt-get install uuid-runtime ``` should do it
+
 Supported protocols are 
  - tcp
  - udp
