@@ -13,22 +13,29 @@ import (
 )
 
 //Print warnings to stdout, unless we are piping to stdout
-var dbg = true
+var dbg = 1
 
 func main() {
 	// Set up the configuration
 	src_flag := "tcp:127.0.0.1:81"
 	dst_flag := "tcp:127.0.0.1:80"
+	fnc_flag := "none"
 	flag.StringVar(&src_flag, "src", src_flag, "Where we will listen for connections, eg. udp:127.0.0.1:22")
 	flag.StringVar(&dst_flag, "dst", dst_flag, "Where we will forward data to, eg. unix:/tmp/pipe.sock")
+	flag.StringVar(&fnc_flag, "fnc", fnc_flag, "Optional encoding behaviour.")
+	dbgptr := flag.Int("v", -1, "Level of verbosity. -1=default, 0=none, 3=debug")
 	helpopt := flag.Bool("?", false, "Show help")
 	flag.Parse()
+	dbg = *dbgptr
+
 	help := *helpopt || *flag.Bool("help", false, "Show help") || *flag.Bool("h", false, "Show help")
 	if help {
-		fmt.Print(`
+		fmt.Print(`TCPChan fwd v20160826
 Usage: fwd [OPTIONS] -src=[src] -dst=[dst]
 		-src 	the proto:path:port to listen on
 		-dst 	the proto:path:port to forward to
+		-fnc	beta. Define an encoding/decoding behaviour
+		-v   	verbosity. default lvl 1. If proto out is std, default 0.
 		
 		proto	one of file/std/unix/udp/tcp
 				file and unix do not require a port
@@ -49,113 +56,65 @@ Use fwd --help for more usage
 	}
 
 	// Parse parameters
-	var split [2]string
-	copy(split[:], strings.SplitN(src_flag, ":", 2))
+	split := [3]string{}
+	copy(split[:], strings.SplitN(src_flag, ":", 3))
 	srcProto := split[0]
-	srcIpport := split[1]
-	copy(split[:], strings.SplitN(dst_flag, ":", 2))
+	srcIP := split[1]
+	srcPort := split[2]
+	split = [3]string{}
+	copy(split[:], strings.SplitN(dst_flag, ":", 3))
 	dstProto := split[0]
-	dstIpport := split[1]
+	dstIP := split[1]
+	dstPort := split[2]
+	split = [3]string{}
+	copy(split[:], strings.SplitN(fnc_flag, ":", 3))
+	fncMode := split[0]
+	fncKey := split[1]
 
-	fmt.Printf("%v %v → %v %v\n",
-		srcProto, srcIpport,
-		dstProto, dstIpport)
+	if dbg == -1 {
+		if dstProto == "std" {
+			dbg = 0
+		} else {
+			dbg = 1
+		}
+	}
+
+	fmt.Printf("%v %v:%v → %v %v:%v \t[verbosity:%v]\n",
+		srcProto, srcIP, srcPort, dstProto, dstIP, dstPort, dbg)
 
 	// Create streams
-	split = [2]string{}
-	copy(split[:], strings.SplitN(srcIpport, ":", 2))
-	fmt.Printf("dbg:%v\n", split)
-	input := InputChannel(srcProto, split[0], split[1])
-
-	split = [2]string{}
-	copy(split[:], strings.SplitN(dstIpport, ":", 2))
-	fmt.Printf("dbg:%v\n", split)
-	output := OutputChannel(dstProto, split[0], split[1])
+	input := InputChannel(srcProto, srcIP, srcPort)
+	output := OutputChannel(dstProto, dstIP, dstPort)
+	encoder := ProxyIO{mode: fncMode, key: fncKey}
 
 	//serve intput to output
 	for io := range input {
-		output <- io
+		enc := encoder
+		enc.source = io
+		output <- &enc
 		defer io.Close()
 	}
-	/*
-		split = [2]string{}
-		copy(split[:], strings.SplitN(srcIpport, ":", 2))
-		switch srcProto {
-		case "file":
-			bufsize := 0
-			if bufsize, err := strconv.Atoi(split[1]); err != nil || bufsize == 0 {
-				bufsize = 128
-			}
-			input = &FileIn{path: split[0], bufsize: bufsize}
-		case "std":
-			bufsize := 0
-			if bufsize, err := strconv.Atoi(split[1]); err != nil || bufsize == 0 {
-				bufsize = 128
-			}
-			input = &StdIn{bufsize: bufsize}
+}
 
-		}
-		input.Init()
-		defer input.Close()
+/**
+	//ENCODE DEFINITIONS
+**/
+type ProxyIO struct {
+	source AnyIn
+	mode   string
+	key    string
+}
 
-		split = [2]string{}
-		copy(split[:], strings.SplitN(dstIpport, ":", 2))
-		switch dstProto {
-		case "file":
-			output = &FileOut{path: split[0]}
-		case "std":
-			output = &StdOut{}
-		}
-		output.Init()
-		defer output.Close()
-		////////////////////////////
-		//TODO how will we handle multiplexed connections with files?
-
-		// Blocking Server
-		go func() {
-			for input.IsOpen() && output.IsOpen() {
-				output.Write(input.Read())
-			}
-		}()
-		go func() {
-			for input.IsOpen() && output.IsOpen() {
-				input.Reply(output.Read())
-			}
-		}()
-
-		for <-input {
-		}
-	*/
-	/*
-		switch srcProto {
-		case "file":
-			target, err := net.DialTimeout(dstProto, dstIpport, 500000)
-			if err != nil {
-				if dbg {
-					fmt.Printf("5XX:%s", err.Error())
-				}
-				return
-			}
-
-		case "stdin":
-
-			scanner := bufio.NewScanner(os.Stdin)
-			for scanner.Scan() {
-				fmt.Println(scanner.Text()) // Println will add back the final '\n'
-			}
-			if err := scanner.Err(); err != nil {
-				fmt.Fprintln(os.Stderr, "reading standard input:", err)
-			}
-		case "stdout":
-			panic("Cannot read in from stdout")
-		default:
-			session, _ := net.Listen(srcProto, srcIpport)
-			for {
-				conn, _ := session.Accept()
-				go handleComms(conn, dstProto, dstIpport)
-			}
-		}
-	*/
+func (p *ProxyIO) Init()                         { p.source.Init() }
+func (p *ProxyIO) Read(buf *[]byte) (int, error) { return p.source.Read(buf) }
+func (p *ProxyIO) Write(data []byte)             { p.source.Write(data) }
+func (p *ProxyIO) Close()                        { p.source.Close() }
+func (p *ProxyIO) IsOpen() bool                  { return p.source.IsOpen() }
+func (p *ProxyIO) Name() string {
+	if p.mode != "none" {
+		return "{" + p.mode + "}(" + p.source.Name() + ")"
+	}
+	return p.source.Name()
 }
 
 /**
@@ -211,17 +170,12 @@ type AnyIn interface {
 
 //STDIN
 type StdIn struct {
-	input   *os.File
-	buffer  []byte
-	bufsize int
-	open    bool
+	input *os.File
+	open  bool
 }
 
-func (i *StdIn) Init() { //Allow 0 for newline delimited?
-	i.input = os.Stdin
-	i.buffer = make([]byte, i.bufsize)
-	i.open = true
-}
+//Allow 0 for newline delimited?
+func (i *StdIn) Init()                         { i.input = os.Stdin; i.open = true }
 func (i *StdIn) Read(buf *[]byte) (int, error) { return i.input.Read(*buf) }
 func (i *StdIn) Write([]byte)                  { /*By default, do not allow writing back to stdin*/ }
 func (i *StdIn) Close()                        { i.open = false }
@@ -294,6 +248,7 @@ func OutputChannel(proto, path, port string) chan AnyIn {
 		go func() {
 			File := FileOut{path: path}
 			File.Init()
+			defer File.Close()
 			for {
 				go func(input AnyIn) {
 					print("\nDebug: got session, pipe to file")
@@ -321,7 +276,7 @@ func OutputChannel(proto, path, port string) chan AnyIn {
 			for {
 				go func(input AnyIn) {
 					if err != nil {
-						if dbg {
+						if dbg > 0 {
 							print("TcpUdpOutConnect:" + err.Error() + "\n")
 						}
 						input.Write([]byte(fmt.Sprintf("5XX:%s", err.Error())))
@@ -355,7 +310,7 @@ type FileOut struct {
 }
 
 func (o *FileOut) Init() {
-	if file, err := os.Open(o.path); err != nil {
+	if file, err := os.OpenFile(o.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err != nil {
 		if os.IsNotExist(err) {
 			folder := path.Dir(o.path)
 			if err := os.MkdirAll(folder, os.FileMode(0666)); err != nil {
@@ -399,7 +354,7 @@ type StdOut struct {
 	open   bool
 }
 
-func (o *StdOut) Init()                          { o.output = os.Stdout; dbg = true; o.open = true }
+func (o *StdOut) Init()                          { o.output = os.Stdout; o.open = true }
 func (o *StdOut) Read(data *[]byte) (int, error) { return 0, nil } //By default, do not allow reading back from output file
 func (o *StdOut) Write(data []byte)              { o.output.Write(data) }
 func (o *StdOut) Close()                         { o.open = false }
