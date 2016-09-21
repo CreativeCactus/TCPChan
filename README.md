@@ -37,10 +37,10 @@ I am working to add a few different protocols and features to make this more use
 
 ## Protocols
 
-file - Serve a file or write to a file
-std  - STDIO
-unix - socket file
-udp/tcp - precisely as one might expect
+ - file - Serve a file or write to a file
+ - std  - STDIO
+ - unix - socket file
+ - udp/tcp - precisely as one might expect
 
 ## Features
 
