@@ -10,6 +10,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //Print warnings to stdout, unless we are piping to stdout
@@ -30,7 +31,7 @@ func main() {
 
 	help := *helpopt || *flag.Bool("help", false, "Show help") || *flag.Bool("h", false, "Show help")
 	if help {
-		fmt.Print(`TCPChan fwd v20160826
+		fmt.Print(`TCPChan fwd v20160921
 Usage: fwd [OPTIONS] -src=[src] -dst=[dst]
 		-src 	the proto:path:port to listen on
 		-dst 	the proto:path:port to forward to
@@ -130,11 +131,11 @@ func InputChannel(proto, path, port string) chan AnyIn {
 		}
 		inputs <- &FileIn{path: path, bufsize: bufsize}
 	case "std":
-		bufsize := 0
-		if bufsize, err := strconv.Atoi(port); err != nil || bufsize == 0 {
-			bufsize = 128
-		}
-		inputs <- &StdIn{bufsize: bufsize}
+		//bufsize := 0
+		// if bufsize, err := strconv.Atoi(port); err != nil || bufsize == 0 {
+		// 	bufsize = 128
+		// }
+		inputs <- &StdIn{} //bufsize: bufsize}
 	case "tcp", "udp", "unix":
 		session, err := net.Listen(proto, path+":"+port)
 		if err != nil {
@@ -270,7 +271,7 @@ func OutputChannel(proto, path, port string) chan AnyIn {
 	case "tcp", "udp", "unix":
 		go func() {
 			//Share connection
-			target, err := net.DialTimeout(proto, path+":"+port, 500000)
+			target, err := net.DialTimeout(proto, path+":"+port, time.Duration(900)*time.Millisecond)
 			tcpudpout := TcpUdpOut{connection: &target}
 			tcpudpout.Init()
 			for {
