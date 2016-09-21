@@ -62,7 +62,7 @@ func main() {
 func handleComms(conn net.Conn) {
 	rid := grid()
 	print("New connection:" + rid + "\n")
-	target, err := net.DialTimeout(dest_proto, dest_ipport, 500000)
+	target, err := net.DialTimeout(dest_proto, dest_ipport, 500*1000*1000) //in ns
 	if err != nil {
 		if dbg {
 			print(rid + ":" + err.Error() + "\n")
