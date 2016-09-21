@@ -36,7 +36,7 @@ Usage: fwd [OPTIONS] -src=[src] -dst=[dst]
 		-src 	the proto:path:port to listen on
 		-dst 	the proto:path:port to forward to
 		-fnc	beta. Define an encoding/decoding behaviour
-		-v   	verbosity. default lvl 1. If proto out is std, default 0.
+		-v   	verbosity. default lvl 0. If proto out is std, default 0.
 		
 		proto	one of file/std/unix/udp/tcp
 				file and unix do not require a port
@@ -76,7 +76,7 @@ Use fwd --help for more usage
 		if dstProto == "std" {
 			dbg = 0
 		} else {
-			dbg = 1
+			dbg = 0
 		}
 	}
 
@@ -271,11 +271,12 @@ func OutputChannel(proto, path, port string) chan AnyIn {
 	case "tcp", "udp", "unix":
 		go func() {
 			//Share connection
-			target, err := net.DialTimeout(proto, path+":"+port, time.Duration(900)*time.Millisecond)
-			tcpudpout := TcpUdpOut{connection: &target}
-			tcpudpout.Init()
 			for {
 				go func(input AnyIn) {
+					target, err := net.DialTimeout(proto, path+":"+port, time.Duration(900)*time.Millisecond)
+					tcpudpout := TcpUdpOut{connection: &target}
+					tcpudpout.Init()
+
 					if err != nil {
 						if dbg > 0 {
 							print("TcpUdpOutConnect:" + err.Error() + "\n")
@@ -380,6 +381,7 @@ func (o *TcpUdpOut) Name() string                   { return "TCPUDPOut" }
 **/
 
 // PipeIO creates a full-duplex pipe between any two AnyIO.
+// Multiplexing method (1:1 default) defines how multiple connections and handled.
 func PipeIO(ioIn, ioOut AnyIO) {
 	print("\nDebug: piping " + ioIn.Name() + "→" + ioOut.Name())
 	IIn, IOut := chanFromAnyIO(ioIn)

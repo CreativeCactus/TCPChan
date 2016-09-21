@@ -1,11 +1,23 @@
 ### TLDR
 
-If you just want to forward some ports on your docker container, use the prebuilt binary which is from circa 8a9e801421a232fde49be8f4f1cf30c85f8b0a06. If that fails, I recommend you go to that commit and go build fwd.go from there, because as of writing this there are some changes and bugs in the works.
+Take data from one port and put it into another. Useful for making a port/host on the local network explicitly available to a specific external port. I use it for setting up docker containers that I might want to leave running but keep the port closed. 
+
+If you just want to forward some ports on your docker container, use the stable prebuilt binary which is from circa 8a9e801421a232fde49be8f4f1cf30c85f8b0a06. If that fails, I recommend you go to that commit and go build fwd.go from there, because as of writing this there are some changes and bugs in the works.
+
+Stable:
 
 ``` 
     wget https://raw.githubusercontent.com/CreativeCactus/TCPChan/master/fwd.old
     chmod +x fwd.old
     ./fwd.old  tcp 0.0.0.0:80 tcp <docker ip addr>:8080
+```
+
+Latest:
+
+```
+    wget https://raw.githubusercontent.com/CreativeCactus/TCPChan/master/fwd
+    chmod +x fwd
+    ./fwd  --src=tcp:0.0.0.0:80 --dst=tcp:<docker ip addr>:8080    
 ```
 
 # TCPChan ←→
