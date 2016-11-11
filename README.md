@@ -1,3 +1,10 @@
+## Note
+
+This project has been more or less abandonned in favor of the much more complete https://github.com/craSH/socat
+
+It was a fun learning experience, and the code will be left here for anyone wishing to use it or PR for a new direction or useful addition.
+
+
 ### TLDR
 
 Take data from one port and put it into another. Useful for making a port/host on the local network explicitly available to a specific external port. I use it for setting up docker containers that I might want to leave running but keep the port closed. 
@@ -17,7 +24,7 @@ Latest:
 ```
     wget https://raw.githubusercontent.com/CreativeCactus/TCPChan/master/fwd
     chmod +x fwd
-    ./fwd  --src=tcp:0.0.0.0:80 --dst=tcp:<docker ip addr>:8080    
+    ./fwd  --src=tcp:0.0.0.0:80 --dst=tcp:<docker ip addr>:8080 &> /dev/null &
 ```
 
 # TCPChan ←→
