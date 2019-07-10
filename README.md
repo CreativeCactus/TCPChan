@@ -1,6 +1,6 @@
 ## Note
 
-This project has been more or less abandonned in favor of the much more complete https://github.com/craSH/socat
+This project has been more or less abandoned in favor of the much more complete https://github.com/craSH/socat
 
 It was a fun learning experience, and the code will be left here for anyone wishing to use it or PR for a new direction or useful addition.
 
